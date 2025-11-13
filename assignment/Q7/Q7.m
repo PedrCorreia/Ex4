@@ -4,10 +4,6 @@
 % simulated data with known delays and velocities.
 %
 % NOTE: The actual function estimate_blood_velocity is in ../utilis/
-
-% Add utilities to path
-addpath('../../utilis');
-
 clear; close all; clc;
 
 fprintf('========================================\n');
@@ -78,7 +74,7 @@ fprintf('========================================\n\n');
 
 % Test different velocities using realistic ultrasound simulation
 % Typical range: 10-100 cm/s
-test_velocities_cms = [10, 25, 50, 75, 100];  % cm/s
+test_velocities_cms = [10, 25, 50, 75, 100,150];  % cm/s
 test_velocities = test_velocities_cms / 100;  % convert to m/s
 
 fprintf('%-20s %-20s %-20s %-15s %-15s\n', ...
