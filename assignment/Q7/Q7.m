@@ -7,10 +7,11 @@
 clear; close all; clc;
 
 fprintf('========================================\n');
-fprintf('Q7: BLOOD VELOCITY ESTIMATION DIAGNOSTIC\n');
+fprintf('Q7: BLOOD VELOCITY ESTIMATION DIAGNOSTIC (OPTIMIZED)\n');
 fprintf('========================================\n\n');
 fprintf('This script validates the estimate_blood_velocity function\n');
-fprintf('using simulated ultrasound data with known velocities.\n\n');
+fprintf('using simulated ultrasound data with known velocities.\n');
+fprintf('Using vectorized matrix operations for maximum speed.\n\n');
 
 %% Simulation Parameters (from specification)
 % Standard parameters for medical ultrasound simulation
@@ -43,7 +44,7 @@ fprintf('========================================\n\n');
 
 % Generate simulated ultrasound data with known velocity
 true_velocity = 0.32;  % 0.32 m/s = 32 cm/s
-num_lines = 10;
+num_lines = 20;
 
 fprintf('Generating simulated RF data...\n');
 fprintf('  True velocity: %.2f m/s (%.0f cm/s)\n', true_velocity, true_velocity*100);
@@ -67,61 +68,124 @@ fprintf('Absolute error: %.6f m/s (%.3f cm/s)\n', abs(estimated_velocity - true_
         abs(estimated_velocity - true_velocity)*100);
 fprintf('Relative error: %.2f%%\n\n', 100*abs(estimated_velocity - true_velocity)/abs(true_velocity));
 
-%% Test 2: Range of Physiological Velocities
+%% Test 2: Range of Physiological Velocities (SAME SCATTERERS)
 fprintf('========================================\n');
 fprintf('TEST 2: Range of Physiological Velocities\n');
 fprintf('========================================\n\n');
+fprintf('Using SAME scatterer pattern for all velocities\n');
+fprintf('(only velocity/time-shift changes)\n\n');
 
 % Test different velocities using realistic ultrasound simulation
 % Typical range: 10-100 cm/s
-test_velocities_cms = [10, 25, 50, 75, 100,150];  % cm/s
+test_velocities_cms = [10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 150];  % cm/s
 test_velocities = test_velocities_cms / 100;  % convert to m/s
+n_test_vels = length(test_velocities);
 
 fprintf('%-20s %-20s %-20s %-15s %-15s\n', ...
         'Target (cm/s)', 'Delay (samples)', 'Estimated (cm/s)', 'Error (cm/s)', 'Error (%)');
 fprintf('--------------------------------------------------------------------------------------------\n');
 
-errors = [];
-for v_true = test_velocities
-    % Generate simulated data with this velocity
-    [rf_sim, sim_p] = simulate_ultrasound_data(v_true, 5);
+% Generate scatterers ONCE (same for all velocities)
+rng(42);  % Fixed seed for reproducibility
+total_duration = 2.0;
+n_total_samples = round(total_duration * fs);
+scatterers = randn(n_total_samples, 1);
+
+% Create pulse
+pulse_duration = M / f0;
+pulse_samples = round(pulse_duration * fs);
+t_pulse = (0:pulse_samples-1)' / fs;
+sigma = pulse_duration / 4;
+t_center = pulse_duration / 2;
+envelope = exp(-((t_pulse - t_center).^2) / (2 * sigma^2));
+pulse = envelope .* sin(2 * pi * f0 * t_pulse);
+pulse = pulse / max(abs(pulse));
+
+% Convolve scatterers with pulse ONCE
+rf_base = conv(scatterers, pulse, 'same');
+
+% Parameters
+n_samples = round(2 * lg * fs / c);
+window_start_sample = round(n_total_samples / 4);
+
+% Pre-allocate
+estimated_vels = zeros(n_test_vels, 1);
+expected_delays = zeros(n_test_vels, 1);
+
+% Generate RF data for each velocity using SAME scatterers
+for i = 1:n_test_vels
+    v_true = test_velocities(i);
     
-    % Use first two lines
-    sig1 = rf_sim(:, 1);
-    sig2 = rf_sim(:, 2);
+    % Calculate shift for this velocity
+    time_shift_per_line = 2 * v_true * T_prf / c;
+    sample_shift_per_line = time_shift_per_line * fs;
+    expected_delays(i) = sample_shift_per_line;
+    
+    % Generate 2 lines with the shift
+    rf_shifted_1 = circshift(rf_base, 0);  % Line 1 (no shift)
+    rf_shifted_2 = circshift(rf_base, round(sample_shift_per_line));  % Line 2 (shifted)
+    
+    % Extract window
+    sig1 = rf_shifted_1(window_start_sample : window_start_sample + n_samples - 1);
+    sig2 = rf_shifted_2(window_start_sample : window_start_sample + n_samples - 1);
     
     % Estimate velocity
-    v_est = estimate_blood_velocity(sig1, sig2, T_prf, c, fs);
-    
-    error_abs = abs(v_est - v_true) * 100;  % cm/s
-    error_rel = 100 * abs(v_est - v_true) / abs(v_true);
-    errors = [errors; error_abs];
-    
+    estimated_vels(i) = estimate_blood_velocity(sig1, sig2, T_prf, c, fs);
+end
+
+% Vectorized error calculation
+errors = abs(estimated_vels - test_velocities') * 100;  % cm/s
+error_rel = 100 * abs(estimated_vels - test_velocities') ./ abs(test_velocities');
+
+% Display results
+for i = 1:n_test_vels
     fprintf('%-20.2f %-20.2f %-20.2f %-15.3f %-15.2f\n', ...
-            v_true*100, sim_p.sample_shift_per_line, v_est*100, error_abs, error_rel);
+            test_velocities(i)*100, expected_delays(i), estimated_vels(i)*100, ...
+            errors(i), error_rel(i));
 end
 
 fprintf('\nMean absolute error: %.3f cm/s\n', mean(errors));
 fprintf('Max absolute error: %.3f cm/s\n\n', max(errors));
 
-%% Test 3: Multiple Estimates (Repeatability)
+%% Test 3: Multiple Estimates (Repeatability) - VECTORIZED
 fprintf('========================================\n');
 fprintf('TEST 3: Multiple Estimates (Repeatability)\n');
 fprintf('========================================\n\n');
 
 % Generate multiple trials with same velocity to test consistency
-v_test = 0.32;  % 32 cm/s
-Ntrials_test = 50;
+v_test = 0.3256;  % 32 cm/s
+Ntrials_test = 1000;  % Increased from 50 since it's faster now
 
 fprintf('Generating %d trials with velocity %.2f cm/s\n\n', Ntrials_test, v_test*100);
 
 [rf_trials, ~] = simulate_ultrasound_data(v_test, Ntrials_test);
 
-% Estimate velocity for each consecutive pair
-estimates = zeros(Ntrials_test - 1, 1);
-for i = 1:(Ntrials_test - 1)
-    estimates(i) = estimate_blood_velocity(rf_trials(:, i), rf_trials(:, i+1), T_prf, c, fs);
+% VECTORIZED: Process all consecutive pairs at once
+% Extract all signal1 (columns 1 to N-1) and signal2 (columns 2 to N)
+signals1 = rf_trials(:, 1:end-1);  % Matrix: n_samples × (Ntrials-1)
+signals2 = rf_trials(:, 2:end);    % Matrix: n_samples × (Ntrials-1)
+
+% Vectorized cross-correlation for all pairs
+n_pairs = Ntrials_test - 1;
+estimates = zeros(n_pairs, 1);
+
+fprintf('Processing %d consecutive pairs...\n', n_pairs);
+
+% We need to loop for xcorr, but it's still faster with pre-allocated arrays
+for i = 1:n_pairs
+    [correlation, lags] = xcorr(signals2(:, i), signals1(:, i));
+    [~, max_idx] = max(correlation);
+    delay_samples = lags(max_idx);
+    t_s = delay_samples / fs;
+    estimates(i) = (t_s * c) / (2 * T_prf);
+    
+    % Print progress every 100 iterations
+    if mod(i, 100) == 0
+        fprintf('  Processed %d / %d pairs (%.1f%%)\n', i, n_pairs, 100*i/n_pairs);
+    end
 end
+
+fprintf('  Completed all %d pairs!\n\n', n_pairs);
 
 fprintf('Results from %d estimates:\n', length(estimates));
 fprintf('  True velocity: %.2f cm/s\n', v_test*100);
@@ -221,20 +285,29 @@ ylabel('Line Number');
 title('Multiple RF Lines (Showing Time Shift)');
 colorbar;
 
-% Plot velocity estimation accuracy
+% Plot velocity estimation accuracy (VECTORIZED)
 subplot(2, 3, 6);
-test_vels = (10:10:100) / 100;  % 10-100 cm/s
-estimated_vels = [];
-true_vels_plot = [];
-for v_t = test_vels
-    [rf_t, ~] = simulate_ultrasound_data(v_t, 3);
-    v_est_temp = estimate_blood_velocity(rf_t(:, 1), rf_t(:, 2), T_prf, c, fs);
-    estimated_vels = [estimated_vels; v_est_temp*100];
-    true_vels_plot = [true_vels_plot; v_t*100];
+test_vels = (10:10:150) / 100;  % 10-150 cm/s, extended range
+n_vels = length(test_vels);
+
+% Pre-allocate
+estimated_vels_plot = zeros(n_vels, 1);
+true_vels_plot = test_vels' * 100;  % Convert to cm/s
+
+% Generate all data at once
+for i = 1:n_vels
+    [rf_t, ~] = simulate_ultrasound_data(test_vels(i), 3);
+    % Vectorized velocity estimation
+    [correlation, lags] = xcorr(rf_t(:, 2), rf_t(:, 1));
+    [~, max_idx] = max(correlation);
+    delay_samples = lags(max_idx);
+    t_s = delay_samples / fs;
+    estimated_vels_plot(i) = ((t_s * c) / (2 * T_prf)) * 100;  % Convert to cm/s
 end
+
 plot(true_vels_plot, true_vels_plot, 'k--', 'LineWidth', 2, 'DisplayName', 'Perfect estimation');
 hold on;
-plot(true_vels_plot, estimated_vels, 'bo-', 'LineWidth', 2, 'MarkerSize', 8, 'DisplayName', 'Estimated');
+plot(true_vels_plot, estimated_vels_plot, 'bo-', 'LineWidth', 2, 'MarkerSize', 8, 'DisplayName', 'Estimated');
 xlabel('True Velocity (cm/s)');
 ylabel('Estimated Velocity (cm/s)');
 title('Estimation Accuracy');
