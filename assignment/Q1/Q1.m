@@ -27,7 +27,7 @@ x_theory = [min(x)-0.1, 0, 0, 1, 1, max(x)+0.1];
 y_theory = [0, 0, 1, 1, 0, 0];
 plot(x_theory, y_theory, 'r-', 'LineWidth', 1.6);
 legend('Estimated PDF','Theoretical Uniform(0,1)','Location','best');
-title(sprintf('Estimated PDF (bin width = %.4g) vs Theoretical', binWidth));
+title('Probability Density Function');
 grid on;
 
 %% Function for estimating the probability density for the signal amplitude
