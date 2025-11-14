@@ -71,7 +71,7 @@ box on;
 xlim([-maxTau maxTau]);
 xlabel('\tau (in secs)'); 
 ylabel('\gamma_{yy}(\tau)');
-title('\gamma_{yy}^{theory}(\tau) = \sigma_x^2 \gamma_{hh}(\tau)');
+title('\gamma_{yy}(\tau) = \sigma_x^2 \gamma_{hh}(\tau)');
 
 % Bottom: overlay theory vs estimate for γ_yy(τ)
 nexttile([1 3]);
