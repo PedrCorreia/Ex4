@@ -60,7 +60,6 @@ xlim([0 (length(conv_sig)-1)*Ts])
 % Delay
 delay = 0.4*10^(-6); % (s)
 
-
 Add_0 = delay*fs;
 
 % Delays
@@ -72,20 +71,12 @@ hold on;
 plot(delayed_t_rand, delayed_conv_sig, LineWidth=1.5)
 
 
+%% Cross-Correlate and plot using Auxillary Function
+close all; clc;
 
-%% Cross-Correlate
-
-figure;
-
-% Cross-Correlate using xcorr
-[corr, lags] = xcorr(conv_sig, delayed_conv_sig);
-
-plot(lags, corr, LineWidth=1.5)
-xlabel('Lag')
-ylabel('Correlation Amplitude')
-title('Cross-Correlation Between the Convolved Signal and Delayed Signal')
-grid on
-
-xlim([-length(delayed_conv_sig), length(delayed_conv_sig)])
+[corr, lags] = delay_cross_correlation(conv_sig, delayed_conv_sig);
 
 
+%% Use function to find the Delay in seconds
+
+[time_delay, delay_samples, corr_max, idx] = analyze_time_delay(corr, fs);
