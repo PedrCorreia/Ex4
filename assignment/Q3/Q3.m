@@ -70,7 +70,7 @@ xlabel('\tau (s)'); ylabel('\gamma_{hh}(\tau)');
 xlim([-maxTau maxTau]);
 ylim([0 0.055])
 
-% (3) γ_yy^(τ)
+% (3) γ_yy^(τ) estimated
 nexttile;
 plot(tau_est, gamma_yy_est, 'LineWidth', 1.5);
 grid on; box on;
