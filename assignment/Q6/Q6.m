@@ -15,39 +15,70 @@
 % parameters (Hint: see help max). The delay must be given in seconds.
 close all; clear; clc;
 
-%% 
+%%
 close all; 
 
-fs = 100*10^(6); % Sampling frequency
+fs = 100*10^(6); % Sampling frequency (Hz)
 f = 5*10^(6); % MHz sinusoid freq
 
-Ts = 1/fs; % Sampling period
-T = 1/f;% Period of the sinusoid
+Ts = 1/fs; % Sampling period (s)
+T = 1/f;   % Period of the sinusoid
 
 t = 0:Ts:2*T; % sinusoid
 t_rand = 0:Ts:(20*10^(-6));
 
-% Fjöldi samples fyrir White noise
+% White noise samples
 nr = 20*10^(-6)*Ts;
 
 sinusoid = sin(2*pi*f*t);
 white_noise = randn(1,length(t_rand));
 
-plot(t,sinusoid, LineWidth=1.5)
-hold on
-plot(t_rand,white_noise)
+%% --- Plot sinusoid + noise ---
+% figure;
+% plot(t, sinusoid)
+% hold on
+% plot(t_rand, white_noise)
+% 
+% xlabel('Time (s)')
+% ylabel('Amplitude')
+% title('Sinusoid and White Noise')
+% grid on
 
-figure
-
-conv_sig = conv(white_noise,sinusoid);
+%% --- Convolution plot ---
+conv_sig = conv(white_noise, sinusoid);
 
 t_rand = 0:Ts:(length(conv_sig)-1)*Ts;
-plot(t_rand, together)
+
+figure;
+plot(t_rand, conv_sig, LineWidth=1.5)
+xlabel('Time (s)', FontSize=22)
+ylabel('Amplitude', FontSize=22)
+title('Convolution of Noise and Sinusoid', FontSize=24)
+grid on
 xlim([0 (length(conv_sig)-1)*Ts])
 
+% Delay
+delay = 0.4*10^(-6); % (s)
+
+Add_0 = delay*fs;
+
+% Delays
+delayed_conv_sig = [zeros(1,Add_0) conv_sig];
+delayed_t_rand = 0:Ts:(length(delayed_conv_sig)-1)*Ts;
+
+hold on;
+
+plot(delayed_t_rand, delayed_conv_sig, LineWidth=1.5)
+ylim([-max(abs(delayed_conv_sig)+3) max(abs(delayed_conv_sig)+3)])
+xlim([0 max(delayed_t_rand)])
 
 
+%% Cross-Correlate and plot using Auxillary Function
+figure;
+
+[corr, lags] = delay_cross_correlation(conv_sig, delayed_conv_sig);
 
 
+%% Use function to find the Delay in seconds
 
-
+[time_delay, delay_samples, corr_max, idx] = analyze_time_delay(corr, fs);
