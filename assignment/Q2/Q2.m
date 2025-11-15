@@ -27,8 +27,8 @@ box on;
 xlabel('n'); ylabel('h[n]');
 title('Impulse Response');
 xlim([0 L]); 
-ylim([1/L - 0.005, 1/L + 0.005]);  % small vertical range around 1/L (≈0.05 for L=20)
-
+ylim([1/L - 0.0051, 1/L + 0.005]);  % small vertical range around 1/L (≈0.05 for L=20)
+yticks([0.045 0.050 0.055]);
 
 % Plot transfer function (magnitude response) of the filter 
 % and confirm first null at 50 Hz
@@ -72,7 +72,7 @@ nbins = 100;
 [centers, pdf_est, binWidth] = estimate_pdf_plot(y, nbins);
 hold on;
 
-% Theoretical Gaussian PDF (CLT approximation: : N(0, sigma^2), sigma^2 = (1/12)/L)
+% Theoretical Gaussian PDF (CLT approximation: N(0, sigma^2), sigma^2 = (1/12)/L)
 sigma = sqrt(1/(12*L));           % variance of average of L Uniform(-0.5,0.5)
 ygrid = linspace(-0.5, 0.5, 1000); % cover the same amplitude range
 fa_gauss = (1/(sqrt(2*pi)*sigma)) * exp(-0.5*(ygrid/sigma).^2);
