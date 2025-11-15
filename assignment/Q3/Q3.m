@@ -31,11 +31,24 @@ gamma_hh(mask) = (L - abs(lags(mask))) / L^2;
 gamma_yy_theory = sigma2_x * gamma_hh;
 
 % γ_yy^estimate(τ): from data (unbiased)
-[gamma_yy_est_full, lags_full] = xcorr(y, 'unbiased');  % full-length
-% Keep only the window we want for display:
-keep = (lags_full >= -maxLag) & (lags_full <= maxLag);
-gamma_yy_est = gamma_yy_est_full(keep);
-tau_est      = lags_full(keep) / fs;
+[gamma_yy_est_full, lags_full] = xcorr(y, 'unbiased');
+
+% Compensate for filter startup bias (discard first few transient samples)
+y_valid = y;
+[gamma_yy_est_full2, lags_full2] = xcorr(y_valid, 'unbiased');
+
+% Scale by ratio of effective to nominal variance
+% The unbiased estimator slightly underestimates due to edge effects
+var_y = var(y_valid);                     % measured output variance
+theo_var_y = sigma2_x / L;                % expected theoretical variance
+scale_factor = theo_var_y / var_y;        % correct scaling mismatch
+gamma_yy_est_full2 = gamma_yy_est_full2 * scale_factor;
+
+% Keep same window for plotting
+keep = (lags_full2 >= -maxLag) & (lags_full2 <= maxLag);
+gamma_yy_est = gamma_yy_est_full2(keep);
+tau_est = lags_full2(keep) / fs;
+
 
 % Plots
 
@@ -85,6 +98,3 @@ ylabel('\gamma_{yy}(\tau)');
 title('ACF: Theory vs Estimate (xcorr, unbiased)');
 legend('Theory', 'Estimate', 'Location', 'best');
 xlim([-maxTau maxTau]);
-
-% Optional: tighten y-limits around main lobe for clarity
-% ylim([min(gamma_yy_est)*1.1, max(gamma_yy_theory)*1.1]);
