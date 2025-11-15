@@ -2,8 +2,8 @@
 clear; clc; close all;
 
 fs = 1000;          % Hz
-N  = 10000;
-t  = (0:N-1)/fs;
+N  = 10000;         % number of samples
+t  = (0:N-1)/fs;    % seconds
 x  = rand(N,1);     % Uniform(0,1)
 
 % Subtract theoretical mean
