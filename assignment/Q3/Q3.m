@@ -1,4 +1,5 @@
-%% Q3 – Four γ(τ) plots: γ_xx, γ_hh, γ_yy(theory), and γ_yy (theory vs estimate) 
+%% Q3 – Autocorrelation of the Filtered Random Signal
+% Four γ(τ) plots: γ_xx, γ_hh, γ_yy(theory), and γ_yy (theory vs estimate) 
 
 clear; clc; close all; 
 fs = 1000;                  % Hz 
@@ -88,6 +89,6 @@ grid on;
 box on;
 xlabel('\tau (s)');
 ylabel('\gamma_{yy}(\tau)');
-title('ACF: Theory vs Estimate (xcorr, unbiased)');
+title('ACF');
 legend('Theory', 'Estimate', 'Location', 'best');
 xlim([-maxTau maxTau]);
