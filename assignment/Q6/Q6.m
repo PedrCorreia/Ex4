@@ -51,9 +51,9 @@ t_rand = 0:Ts:(length(conv_sig)-1)*Ts;
 
 figure;
 plot(t_rand, conv_sig, LineWidth=1.5)
-xlabel('Time (s)')
-ylabel('Amplitude')
-title('Convolution of Noise and Sinusoid')
+xlabel('Time (s)', FontSize=22)
+ylabel('Amplitude', FontSize=22)
+title('Convolution of Noise and Sinusoid', FontSize=24)
 grid on
 xlim([0 (length(conv_sig)-1)*Ts])
 
@@ -69,10 +69,12 @@ delayed_t_rand = 0:Ts:(length(delayed_conv_sig)-1)*Ts;
 hold on;
 
 plot(delayed_t_rand, delayed_conv_sig, LineWidth=1.5)
+ylim([-max(abs(delayed_conv_sig)+3) max(abs(delayed_conv_sig)+3)])
+xlim([0 max(delayed_t_rand)])
 
 
 %% Cross-Correlate and plot using Auxillary Function
-close all; clc;
+figure;
 
 [corr, lags] = delay_cross_correlation(conv_sig, delayed_conv_sig);
 
