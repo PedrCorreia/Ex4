@@ -60,7 +60,6 @@ nexttile;
 stem(tau, gamma_xx, 'filled', 'LineWidth', 1);
 grid on; box on;
 xlabel('\tau (s)'); ylabel('\gamma_{xx}(\tau)');
-title('\gamma_{xx}(\tau)  (white input)');
 xlim([-maxTau maxTau]);
 
 % (2) γ_hh(τ)
@@ -68,17 +67,16 @@ nexttile;
 plot(tau, gamma_hh, 'LineWidth', 1.5);
 grid on; box on;
 xlabel('\tau (s)'); ylabel('\gamma_{hh}(\tau)');
-title('\gamma_{hh}(\tau)  (MA(L) triangle)');
 xlim([-maxTau maxTau]);
 ylim([0 0.055])
 
-% (3) γ_yy^{theory}(τ)
+% (3) γ_yy^(τ)
 nexttile;
-plot(tau, gamma_yy_theory, 'LineWidth', 1.5);
+plot(tau_est, gamma_yy_est, 'LineWidth', 1.5);
 grid on; box on;
 xlabel('\tau (s)'); ylabel('\gamma_{yy}(\tau)');
-title('\gamma_{yy}^{theory}(\tau) = \sigma_x^2 \gamma_{hh}(\tau)');
 xlim([-maxTau maxTau]);
+ylim([-0.0004 0.0045])
 
 % Figure 2: Theoretical vs Estimated γyy
 figure;
