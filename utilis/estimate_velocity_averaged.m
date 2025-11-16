@@ -12,7 +12,7 @@ function velocity = estimate_velocity_averaged(data, T_prf, c, fs)
 
     [n_samples, n_lines] = size(data);
     correlations = [];
-    % Cross-correlate consecutive lines
+    % cross-correlate consecutive lines
     for i = 1:(n_lines - 1)
         signal1 = data(:, i);
         signal2 = data(:, i + 1);

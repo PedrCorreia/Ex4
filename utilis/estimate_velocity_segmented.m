@@ -1,6 +1,5 @@
 function [velocities, segment_centers, depths] = estimate_velocity_segmented(data, T_prf, c, fs, segment_duration)
-% ESTIMATE_VELOCITY_SEGMENTED Estimate blood velocity for segments of ultrasound data
-% Syntax:
+
 %   [velocities, segment_centers, depths] = estimate_velocity_segmented(data, T_prf, c, fs, segment_duration)
 % Inputs:
 %   data              - Matrix of ultrasound data (n_samples x n_lines)

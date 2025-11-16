@@ -14,7 +14,7 @@ function [rf_data, params, rf_long] = simulate_ultrasound_data(vz, Ntrials)
     M = 4;             % Sine periods in pulse
     fs = 96e6;         % Sampling frequency (Hz)
     c = 1540;          % Speed of sound (m/s)
-    fprf = 5e3;        % PRF (Hz)
+    fprf = 5e3;        % Hz
     lg = 1e-3;         % Range gate length (m)
     Nc = 8;            % Lines for one estimate
     
@@ -86,6 +86,5 @@ function [rf_data, params, rf_long] = simulate_ultrasound_data(vz, Ntrials)
     params.pulse = pulse;
     params.t = t;
     params.scatterers = scatterers;
-    % Return the long (pre-window) RF base so callers can reuse it
     rf_long = rf_base;
 end
