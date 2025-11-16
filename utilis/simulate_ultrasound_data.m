@@ -26,7 +26,7 @@ function [rf_data, params] = simulate_ultrasound_data(vz, Ntrials)
     n_samples = round(2 * lg * fs / c);
     
     % generate longer signal to avoid circular wrapping
-    total_duration = 2.0;  % 2 seconds total
+    total_duration = 5;  % 2 seconds total
     n_total_samples = round(total_duration * fs);
     
     % window within the longer signal (centered)
