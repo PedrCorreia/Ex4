@@ -36,7 +36,7 @@ function [velocities, segment_centers, depths] = estimate_velocity_segmented(dat
         for i = 1:(n_lines - 1)
             signal1 = segment_data(:, i);
             signal2 = segment_data(:, i + 1);
-            [corr, lags] = xcorr(signal2, signal1);
+            [corr, lags] = xcorr(signal1, signal2);
             correlations = [correlations; corr'];
         end
         

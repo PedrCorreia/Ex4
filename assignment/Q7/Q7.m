@@ -87,7 +87,7 @@ for run_idx = 1:N_runs
 
         % 2 lines with time shift applied on the long RF
         rf_shifted_1 = circshift(rf_long, 0);  % Line 1 (no shift)
-        rf_shifted_2 = circshift(rf_long, round(sample_shift_per_line));  % Line 2 (shifted)
+        rf_shifted_2 = circshift(rf_long, -round(sample_shift_per_line));  % Line 2 (shifted)
 
         % extract window using utility's indices
         sig1 = rf_shifted_1(window_start_sample : window_start_sample + n_samples - 1);

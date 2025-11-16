@@ -11,7 +11,7 @@ function velocity = estimate_blood_velocity(signal1, signal2, T_prf, c, fs)
 % Output:
 %   velocity - Estimated blood velocity in m/s
 
-    [correlation, lags] = xcorr(signal2, signal1);
+    [correlation, lags] = xcorr(signal1, signal2);
     [~, max_idx] = max(correlation);
     delay_samples = lags(max_idx);
     t_s = delay_samples / fs;

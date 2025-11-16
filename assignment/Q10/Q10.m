@@ -3,10 +3,6 @@
 % This script applies segmented velocity estimation to carotid artery
 % ultrasound data and plots the velocity profile as a function of depth.
 
-% Add utilities to path
-addpath('../../utilis');
-
-clear; close all; clc;
 
 %% Load the data
 fprintf('========================================\n');
@@ -31,8 +27,7 @@ fprintf('  Segment duration: %.0f μs\n', segment_duration*1e6);
 fprintf('  Segment size: %d samples\n\n', round(segment_duration*fs));
 
 %% Estimate velocities for segments
-% Copy the function here or ensure it's in the path
-[velocities, segment_centers, depths] = estimate_velocity_segmented(data, T_prf, c, fs, segment_duration);
+[velocities, segment_centers] = estimate_velocity_segmented(data, T_prf, c, fs, segment_duration);
 
 fprintf('Number of segments: %d\n\n', length(velocities));
 fprintf('Velocity statistics:\n');
@@ -41,134 +36,56 @@ fprintf('  Median: %.4f m/s (%.2f cm/s)\n', median(velocities), median(velocitie
 fprintf('  Std:    %.4f m/s (%.2f cm/s)\n', std(velocities), std(velocities)*100);
 fprintf('  Min:    %.4f m/s (%.2f cm/s)\n', min(velocities), min(velocities)*100);
 fprintf('  Max:    %.4f m/s (%.2f cm/s)\n\n', max(velocities), max(velocities)*100);
+
+% Calculate depths from segment centers
+depths = segment_centers * c / 2;
 fprintf('Depth range: %.2f mm to %.2f mm\n', depths(1)*1000, depths(end)*1000);
 fprintf('Total depth: %.2f mm\n\n', (depths(end) - depths(1))*1000);
 
-%% Main Visualization
-figure('Position', [100, 100, 1600, 1000]);
-
-% Main plot: Velocity vs Depth
-subplot(2, 3, [1 4]);
-plot(depths * 1000, velocities * 100, 'b-o', 'LineWidth', 2, 'MarkerSize', 5);
+%% Visualization - three square figures
+% Figure 1: Velocity vs Depth
+fig1 = figure('Position', [100, 100, 800, 800]);
+plot(depths * 1000, velocities * 100, 'o-', 'LineWidth', 2, 'MarkerSize', 6, ...
+     'MarkerFaceColor', [0 0.4470 0.7410]);
 hold on;
-yline(mean(velocities)*100, 'r--', sprintf('Mean: %.2f cm/s', mean(velocities)*100), ...
+hp1 = yline(mean(velocities)*100, 'r--', sprintf('Mean: %.2f cm/s', mean(velocities)*100), ...
       'LineWidth', 2, 'LabelHorizontalAlignment', 'left');
-yline(0, 'k-', 'LineWidth', 0.5);
-% Fill area under curve
-area(depths * 1000, velocities * 100, 'FaceAlpha', 0.3, 'EdgeColor', 'none');
-xlabel('Depth (mm)', 'FontSize', 12, 'FontWeight', 'bold');
-ylabel('Blood Velocity (cm/s)', 'FontSize', 12, 'FontWeight', 'bold');
-title('Carotid Artery Velocity Profile vs Depth', 'FontSize', 14, 'FontWeight', 'bold');
+set(hp1, 'HandleVisibility', 'off');
+xlabel('Depth (mm)');
+ylabel('Velocity (cm/s)');
+title('Q10: Velocity vs Depth');
 grid on;
-legend('Velocity profile', 'Mean velocity', 'Location', 'best');
+saveas(fig1, 'Q10_velocity_depth.png');
+fprintf('Saved: Q10_velocity_depth.png\n');
 
-% Velocity vs Segment Number
-subplot(2, 3, 2);
-plot(0:length(velocities)-1, velocities * 100, 'g-o', 'LineWidth', 2, 'MarkerSize', 4);
+% Figure 2: Velocity vs Time (2 µs intervals)
+fig2 = figure('Position', [150, 150, 800, 800]);
+plot(segment_centers * 1e6, velocities * 100, 'o-', 'LineWidth', 2, 'MarkerSize', 6, ...
+     'MarkerFaceColor', [0 0.4470 0.7410]);
 hold on;
-yline(mean(velocities)*100, 'r--', 'LineWidth', 2);
-xlabel('Segment Number', 'FontSize', 11);
-ylabel('Velocity (cm/s)', 'FontSize', 11);
-title('Velocity vs Segment Number', 'FontSize', 12, 'FontWeight', 'bold');
+hp2 = yline(mean(velocities)*100, 'r--', sprintf('Mean: %.2f cm/s', mean(velocities)*100), ...
+      'LineWidth', 2, 'LabelHorizontalAlignment', 'left');
+set(hp2, 'HandleVisibility', 'off');
+xlabel('Time (µs)');
+ylabel('Velocity (cm/s)');
+title('Q10: Velocity vs Time (2 µs intervals)');
 grid on;
+saveas(fig2, 'Q10_velocity_time.png');
+fprintf('Saved: Q10_velocity_time.png\n');
 
-% Velocity vs Time
-subplot(2, 3, 3);
-plot(segment_centers * 1e6, velocities * 100, 'm-o', 'LineWidth', 2, 'MarkerSize', 4);
-hold on;
-yline(mean(velocities)*100, 'r--', 'LineWidth', 2);
-xlabel('Time (μs)', 'FontSize', 11);
-ylabel('Velocity (cm/s)', 'FontSize', 11);
-title('Velocity vs Time', 'FontSize', 12, 'FontWeight', 'bold');
-grid on;
-
-% Histogram
-subplot(2, 3, 5);
-histogram(velocities * 100, 40, 'EdgeColor', 'black', 'FaceAlpha', 0.7, 'FaceColor', [0.3 0.7 0.9]);
-hold on;
-xline(mean(velocities)*100, 'r--', sprintf('Mean: %.2f', mean(velocities)*100), ...
-      'LineWidth', 2, 'LabelVerticalAlignment', 'bottom');
-xline(median(velocities)*100, 'g--', sprintf('Median: %.2f', median(velocities)*100), ...
-      'LineWidth', 2, 'LabelVerticalAlignment', 'top');
-xlabel('Velocity (cm/s)', 'FontSize', 11);
-ylabel('Frequency', 'FontSize', 11);
-title('Velocity Distribution', 'FontSize', 12, 'FontWeight', 'bold');
-grid on;
-
-% RF data visualization
-subplot(2, 3, 6);
-imagesc(1:size(data, 2), (1:size(data, 1))/fs*1e6, data);
-colormap(gray);
-xlabel('Line Number', 'FontSize', 11);
-ylabel('Time (μs)', 'FontSize', 11);
-title('Raw RF Data', 'FontSize', 12, 'FontWeight', 'bold');
-colorbar;
-
-sgtitle(sprintf('Q10: Carotid Artery Analysis - Mean Velocity = %.2f cm/s', mean(velocities)*100), ...
-        'FontSize', 16, 'FontWeight', 'bold');
-
-% Save figure
-saveas(gcf, 'Q10_carotid_analysis.png');
-fprintf('Plot saved as Q10_carotid_analysis.png\n\n');
-
-%% Detailed Velocity Profile Plot
-figure('Position', [150, 150, 1200, 600]);
-
-% Calculate moving average for smoothing
-window_size = 5;
-if length(velocities) >= window_size
-    velocities_smooth = movmean(velocities, window_size);
-    plot(depths * 1000, velocities_smooth * 100, 'r-', 'LineWidth', 3, 'DisplayName', 'Smoothed velocity');
-    hold on;
-end
-
-plot(depths * 1000, velocities * 100, 'b.', 'MarkerSize', 8, 'DisplayName', 'Measured velocity');
-yline(0, 'k-', 'LineWidth', 1);
-area(depths * 1000, velocities * 100, 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'DisplayName', '');
-
-xlabel('Depth (mm)', 'FontSize', 13, 'FontWeight', 'bold');
-ylabel('Blood Velocity (cm/s)', 'FontSize', 13, 'FontWeight', 'bold');
-title('Carotid Artery - Detailed Velocity Profile', 'FontSize', 15, 'FontWeight', 'bold');
-grid on;
-legend('Location', 'best', 'FontSize', 11);
-
-% Save figure
-saveas(gcf, 'Q10_detailed_profile.png');
-fprintf('Detailed plot saved as Q10_detailed_profile.png\n\n');
-
-%% Print detailed segment information
-fprintf('========================================\n');
-fprintf('DETAILED SEGMENT INFORMATION\n');
-fprintf('========================================\n\n');
-fprintf('%-5s %-12s %-12s %-15s\n', 'Seg', 'Depth (mm)', 'Time (μs)', 'Velocity (cm/s)');
-fprintf('------------------------------------------------------------\n');
-
-% Print every 5th segment to avoid clutter
-step = max(1, floor(length(velocities) / 20));
-for i = 1:step:length(velocities)
-    fprintf('%-5d %10.2f  %10.2f  %13.2f\n', ...
-            i-1, depths(i)*1000, segment_centers(i)*1e6, velocities(i)*100);
-end
-
-%% Analyze velocity changes
-fprintf('\n========================================\n');
-fprintf('VELOCITY PROFILE ANALYSIS\n');
-fprintf('========================================\n\n');
-
-% Find peak velocity
-[max_vel, max_idx] = max(abs(velocities));
-fprintf('Peak velocity:\n');
-fprintf('  Value: %.2f cm/s\n', velocities(max_idx)*100);
-fprintf('  At depth: %.2f mm\n', depths(max_idx)*1000);
-fprintf('  At segment: %d\n\n', max_idx-1);
-
-% Analyze velocity gradient
-velocity_gradient = gradient(velocities * 100, depths * 1000);
-fprintf('Velocity gradient statistics:\n');
-fprintf('  Mean gradient: %.2f (cm/s)/mm\n', mean(velocity_gradient));
-fprintf('  Max gradient: %.2f (cm/s)/mm\n', max(velocity_gradient));
-fprintf('  Min gradient: %.2f (cm/s)/mm\n\n', min(velocity_gradient));
-
-fprintf('========================================\n');
-fprintf('Analysis complete!\n');
-fprintf('========================================\n');
+% Figure 3: Color Flow Map
+fig3 = figure('Position', [200, 200, 800, 800]);
+n_lines = size(data, 2);
+n_segments = length(velocities);
+% Create velocity map: rows = segments (depth), columns = lines
+velocity_map = repmat(velocities * 100, 1, n_lines);
+imagesc(1:n_lines, depths * 1000, velocity_map);
+colormap(jet);
+cb = colorbar;
+ylabel(cb, 'Velocity (cm/s)');
+xlabel('Line Number');
+ylabel('Depth (mm)');
+title('Q10: Color Flow Map');
+axis xy;
+saveas(fig3, 'Q10_color_flow_map.png');
+fprintf('Saved: Q10_color_flow_map.png\n\n');

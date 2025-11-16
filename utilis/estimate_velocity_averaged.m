@@ -16,7 +16,7 @@ function velocity = estimate_velocity_averaged(data, T_prf, c, fs)
     for i = 1:(n_lines - 1)
         signal1 = data(:, i);
         signal2 = data(:, i + 1);
-        [corr, lags] = xcorr(signal2, signal1);
+        [corr, lags] = xcorr(signal1, signal2);
         correlations = [correlations; corr'];
     end
     

@@ -28,10 +28,35 @@ fprintf('Estimated blood velocity: %.2f cm/s\n\n', velocity*100);
 %% Visualization - save each subplot as a separate square image
 % Plot first two lines as a square image
 fig1 = figure('Position', [100, 100, 800, 800]);
+% time axis in seconds
+t = (0:n_samples-1) / fs;
+plot(t, data(:, 1), 'LineWidth', 1.5);
+hold on;
+plot(t, data(:, 2), 'LineWidth', 1.5);
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('Q8: First Two Lines');
+legend('Line 1', 'Line 2');
+grid on;
+saveas(fig1, 'Q8_line12.png');
+fprintf('Saved: Q8_line12.png\n');
 
+% Plot all lines as an image (square)
+fig2 = figure('Position', [150, 150, 800, 800]);
+% imagesc with time axis (seconds) on y-axis
+imagesc(1:n_lines, t, data);
+colormap(gray);
+xlabel('Line Number');
+ylabel('Time (s)');
+title('Q8: All Lines (image)');
+axis xy; axis image; colorbar;
+saveas(fig2, 'Q8_all_lines.png');
+fprintf('Saved: Q8_all_lines.png\n');
+
+% Compute averaged cross-correlation
 correlations = [];
 for i = 1:(n_lines - 1)
-    [corr, lags] = xcorr(data(:, i+1), data(:, i));
+    [corr, lags] = xcorr(data(:, i), data(:, i+1));
     correlations = [correlations; corr'];
 end
 avg_correlation = mean(correlations, 1);

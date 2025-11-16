@@ -62,7 +62,7 @@ function [rf_data, params, rf_long] = simulate_ultrasound_data(vz, Ntrials)
     % step 3: generate RF data for each line using circshift
     for line_idx = 1:Ntrials
         shift_samples = round(sample_shift_per_line * (line_idx - 1));
-        rf_shifted = circshift(rf_base, shift_samples);
+        rf_shifted = circshift(rf_base, -shift_samples);
         rf_data(:, line_idx) = rf_shifted(window_start_sample : window_start_sample + n_samples - 1);
     end
     
