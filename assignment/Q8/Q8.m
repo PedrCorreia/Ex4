@@ -41,7 +41,7 @@ grid on;
 saveas(fig1, 'Q8_line12.png');
 fprintf('Saved: Q8_line12.png\n');
 
-% Plot all lines as an image (square)
+% Plot all lines as an image 
 fig2 = figure('Position', [150, 150, 800, 800]);
 % imagesc with time axis (seconds) on y-axis
 imagesc(1:n_lines, t, data);
@@ -53,7 +53,7 @@ axis xy; axis image; colorbar;
 saveas(fig2, 'Q8_all_lines.png');
 fprintf('Saved: Q8_all_lines.png\n');
 
-% Compute averaged cross-correlation
+% averaged cross-correlation
 correlations = [];
 for i = 1:(n_lines - 1)
     [corr, lags] = xcorr(data(:, i), data(:, i+1));
@@ -64,7 +64,7 @@ avg_correlation = mean(correlations, 1);
 lag_sec = lags / fs; % convert lags to seconds
 lag_usec = lags / fs * 1e6; % convert lags to microseconds
 
-% Plot averaged cross-correlation (square)
+% Plot averaged cross-correlation
 fig3 = figure('Position', [200, 200, 800, 800]);
 plot(lag_usec, avg_correlation, 'LineWidth', 1.5);
 hold on;
@@ -83,7 +83,7 @@ fprintf('Averaged cross-correlation peak at lag = %d samples (%.6f µs), value =
 v_est_from_lag = (lag_sec(max_idx) * c) / (2 * T_prf);
 fprintf('Estimated velocity from peak lag: %.6f m/s (%.2f cm/s)\n\n', v_est_from_lag, v_est_from_lag*100);
 
-% Zoomed view around maximum (square) - plot all data and use xlim
+% Zoomed view around maximum 
 fig4 = figure('Position', [250, 250, 800, 800]);
 plot(lag_usec, avg_correlation, 'LineWidth', 1.5);
 hold on;
@@ -94,7 +94,6 @@ xlabel('Lag (µs)');
 ylabel('Cross-correlation');
 title('Q8: Zoomed Cross-Correlation (around maximum)');
 grid on;
-% Set axis limits to zoom around peak (±window in microseconds)
 window_usec = 500 / fs * 1e6;  % convert 500 samples to microseconds
 xlim([lag_usec(max_idx) - window_usec, lag_usec(max_idx) + window_usec]);
 saveas(fig4, 'Q8_zoom_correlation.png');
