@@ -1,5 +1,5 @@
 %% Q3 – Autocorrelation of the Filtered Random Signal
-% Four γ(τ) plots: γ_xx, γ_hh, γ_yy(theory), and γ_yy (theory vs estimate) 
+% Four γ(τ) plots: γ_xx, γ_hh, γ_yy (estimated), and γ_yy (theory vs estimate) 
 
 clear; clc; close all; 
 fs = 1000;                  % Hz 
@@ -34,16 +34,15 @@ gamma_yy_theory = sigma2_x * gamma_hh;
 % γ_yy^estimate(τ): from data (unbiased) 
 [gamma_yy_est_full, lags_full] = xcorr(y, 'unbiased'); 
 
-% Compensate for filter startup bias
+% Use the full filtered signal
 y_valid = y; 
 [gamma_yy_est_full2, lags_full2] = xcorr(y_valid, 'unbiased'); 
 
-% Scale by ratio of effective to nominal variance 
-% The unbiased estimator slightly underestimates due to edge effects 
+% Variance correction (amplitude alignment)
 var_y = var(y_valid);                       % measured output variance 
 theo_var_y = sigma2_x / L;                  % expected theoretical variance 
 scale_factor = theo_var_y / var_y;          % correct scaling mismatch 
-gamma_yy_est_full2 = gamma_yy_est_full2 * scale_factor; 
+gamma_yy_est_full2 = gamma_yy_est_full2 * scale_factor; % Apply amplitude correction
 
 % Keep same window for plotting 
 keep = (lags_full2 >= -maxLag) & (lags_full2 <= maxLag); 
@@ -51,7 +50,7 @@ gamma_yy_est = gamma_yy_est_full2(keep);
 tau_est = lags_full2(keep) / fs; 
 
 % Plots 
-% Figure 1: γxx, γhh, γyy(theory)
+% Figure 1: γxx, γhh, γyy(estimated)
 figure;
 tiledlayout(3,1,'Padding','compact','TileSpacing','compact');
 
