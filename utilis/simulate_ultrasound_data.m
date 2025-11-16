@@ -1,4 +1,4 @@
-function [rf_data, params] = simulate_ultrasound_data(vz, Ntrials)
+function [rf_data, params, rf_long] = simulate_ultrasound_data(vz, Ntrials)
 % SIMULATE_ULTRASOUND_DATA Generate simulated ultrasound RF data with motion
 % Syntax:
 %   [rf_data, params] = simulate_ultrasound_data(vz, Ntrials)
@@ -26,7 +26,7 @@ function [rf_data, params] = simulate_ultrasound_data(vz, Ntrials)
     n_samples = round(2 * lg * fs / c);
     
     % generate longer signal to avoid circular wrapping
-    total_duration = 5;  % 2 seconds total
+    total_duration = 1;  % 1 seconds total
     n_total_samples = round(total_duration * fs);
     
     % window within the longer signal (centered)
@@ -85,4 +85,7 @@ function [rf_data, params] = simulate_ultrasound_data(vz, Ntrials)
     params.time_shift_per_line = time_shift_per_line;
     params.pulse = pulse;
     params.t = t;
+    params.scatterers = scatterers;
+    % Return the long (pre-window) RF base so callers can reuse it
+    rf_long = rf_base;
 end

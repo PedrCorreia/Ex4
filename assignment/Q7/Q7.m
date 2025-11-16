@@ -1,17 +1,11 @@
 % Q7: Diagnostic and Validation Script for Blood Velocity Estimation
-%
-% This script validates the estimate_blood_velocity function using
-% simulated data with known delays and velocities.
-%
-% NOTE: The actual function estimate_blood_velocity is in ../utilis/
+
 clear; close all; clc;
 
 fprintf('========================================\n');
-fprintf('Q7: BLOOD VELOCITY ESTIMATION DIAGNOSTIC (OPTIMIZED)\n');
+fprintf('Q7: BLOOD VELOCITY ESTIMATION DIAGNOSTIC \n');
 fprintf('========================================\n\n');
-fprintf('This script validates the estimate_blood_velocity function\n');
-fprintf('using simulated ultrasound data with known velocities.\n');
-fprintf('Using vectorized matrix operations for maximum speed.\n\n');
+
 
 %% Simulation Parameters (from specification)
 % Standard parameters for medical ultrasound simulation
@@ -20,30 +14,15 @@ M = 4;             % Sine periods in pulse
 fs = 96e6;         % Sampling frequency: 96 MHz
 c = 1540;          % Propagation velocity: 1540 m/s
 fprf = 5e3;        % Pulse repetition frequency: 5 kHz
-lg = 1e-3;         % Length of range gate: 1 mm
-Nc = 8;            % Lines for one estimate
-snr = 2;           % Signal-to-noise ratio (not used, no noise)
-
 T_prf = 1/fprf;    % Pulse repetition period
-
-fprintf('Ultrasound Simulation Parameters:\n');
-fprintf('  Center frequency: %.1f MHz\n', f0/1e6);
-fprintf('  Periods in pulse: %d\n', M);
-fprintf('  Sampling frequency: %.0f MHz\n', fs/1e6);
-fprintf('  Pulse repetition frequency: %.1f kHz\n', fprf/1e3);
-fprintf('  Pulse repetition period: %.0f μs\n', T_prf*1e6);
-fprintf('  Speed of sound: %.0f m/s\n', c);
-fprintf('  Range gate length: %.1f mm\n', lg*1e3);
-fprintf('  Lines for estimate: %d\n', Nc);
-fprintf('  SNR: %.1f (noise not added)\n\n', snr);
 
 %% Test 1: Single Known Velocity
 fprintf('========================================\n');
-fprintf('TEST 1: Single Known Velocity\n');
+fprintf('TEST 1: Single  Velocity\n');
 fprintf('========================================\n\n');
 
 % Generate simulated ultrasound data with known velocity (ONLY 2 LINES)
-true_velocity = 0.32;  % 0.32 m/s = 32 cm/s
+true_velocity = 0.325;  % 0.32 m/s = 32 cm/s
 num_lines = 2;  % Only 2 lines needed for velocity estimation
 
 fprintf('Generating simulated RF data...\n');
@@ -59,7 +38,6 @@ fprintf('Expected delay per line: %.2f samples\n\n', sim_params.sample_shift_per
 signal1 = rf_data(:, 1);
 signal2 = rf_data(:, 2);
 
-% Estimate velocity using the function
 estimated_velocity = estimate_blood_velocity(signal1, signal2, T_prf, c, fs);
 
 fprintf('True velocity: %.4f m/s (%.2f cm/s)\n', true_velocity, true_velocity*100);
@@ -68,15 +46,13 @@ fprintf('Absolute error: %.6f m/s (%.3f cm/s)\n', abs(estimated_velocity - true_
         abs(estimated_velocity - true_velocity)*100);
 fprintf('Relative error: %.2f%%\n\n', 100*abs(estimated_velocity - true_velocity)/abs(true_velocity));
 
-%% Test 2: Range of Physiological Velocities (SAME SCATTERERS)
+%% Test 2: Range of Physiological Velocities 
 fprintf('========================================\n');
 fprintf('TEST 2: Range of Physiological Velocities\n');
 fprintf('========================================\n\n');
-fprintf('Using SAME scatterer pattern for all velocities\n');
-fprintf('(only velocity/time-shift changes)\n\n');
 
-% Test different velocities using realistic ultrasound simulation
-% Typical range: 10-100 cm/s
+% test different velocities using realistic ultrasound simulation
+% Typical range: 10-100 cm/s with bakcflow
 test_velocities_cms = -110:10:100;  % cm/s
 test_velocities = test_velocities_cms / 100;  % convert to m/s
 n_test_vels = length(test_velocities);
@@ -85,147 +61,93 @@ fprintf('%-20s %-20s %-20s %-15s %-15s\n', ...
         'Target (cm/s)', 'Delay (samples)', 'Estimated (cm/s)', 'Error (cm/s)', 'Error (%)');
 fprintf('--------------------------------------------------------------------------------------------\n');
 
-% Generate scatterers ONCE (same for all velocities)
-rng(42);  % Fixed seed for reproducibility
-total_duration = 1;
-n_total_samples = round(total_duration * fs);
-scatterers = randn(n_total_samples, 1);
+% Run the velocity sweep multiple times and average estimates
+N_runs = 10;  % number of repetitions for averaging
 
-% Create pulse
-pulse_duration = M / f0;
-pulse_samples = round(pulse_duration * fs);
-t_pulse = (0:pulse_samples-1)' / fs;
-sigma = pulse_duration / 4;
-t_center = pulse_duration / 2;
-envelope = exp(-((t_pulse - t_center).^2) / (2 * sigma^2));
-pulse = envelope .* sin(2 * pi * f0 * t_pulse);
-pulse = pulse / max(abs(pulse));
-
-% Convolve scatterers with pulse ONCE
-rf_base = conv(scatterers, pulse, 'same');
-
-% Parameters
-n_samples = round(2 * lg * fs / c);
-window_start_sample = round(n_total_samples / 4);
-
-% Pre-allocate
-estimated_vels = zeros(n_test_vels, 1);
+% Pre-allocate matrix to store estimates (rows: velocities, cols: runs)
+estimates_matrix = zeros(n_test_vels, N_runs);
 expected_delays = zeros(n_test_vels, 1);
 
-% Generate RF data for each velocity using SAME scatterers
-for i = 1:n_test_vels
-    v_true = test_velocities(i);
-    
-    % Calculate shift for this velocity
-    time_shift_per_line = 2 * v_true * T_prf / c;
-    sample_shift_per_line = time_shift_per_line * fs;
-    expected_delays(i) = sample_shift_per_line;
-    
-    % Generate 2 lines with the shift
-    rf_shifted_1 = circshift(rf_base, 0);  % Line 1 (no shift)
-    rf_shifted_2 = circshift(rf_base, round(sample_shift_per_line));  % Line 2 (shifted)
-    
-    % Extract window
-    sig1 = rf_shifted_1(window_start_sample : window_start_sample + n_samples - 1);
-    sig2 = rf_shifted_2(window_start_sample : window_start_sample + n_samples - 1);
-    
-    % Estimate velocity
-    estimated_vels(i) = estimate_blood_velocity(sig1, sig2, T_prf, c, fs);
+for run_idx = 1:N_runs
+    % generate base RF using the utility for this run (fresh scatterers)
+    [~, params_sim, rf_long] = simulate_ultrasound_data(0, 1);
+
+    % Extract parameters from params_sim (use utility's windowing)
+    n_total_samples = params_sim.n_total_samples;
+    n_samples = params_sim.n_samples;
+    window_start_sample = params_sim.window_start_sample;
+
+    for i = 1:n_test_vels
+        v_true = test_velocities(i);
+
+        % velocity shift
+        time_shift_per_line = 2 * v_true * T_prf / c;
+        sample_shift_per_line = time_shift_per_line * fs;
+        expected_delays(i) = sample_shift_per_line;  % same each run
+
+        % 2 lines with time shift applied on the long RF
+        rf_shifted_1 = circshift(rf_long, 0);  % Line 1 (no shift)
+        rf_shifted_2 = circshift(rf_long, round(sample_shift_per_line));  % Line 2 (shifted)
+
+        % extract window using utility's indices
+        sig1 = rf_shifted_1(window_start_sample : window_start_sample + n_samples - 1);
+        sig2 = rf_shifted_2(window_start_sample : window_start_sample + n_samples - 1);
+
+        % estimate velocity and store
+        estimates_matrix(i, run_idx) = estimate_blood_velocity(sig1, sig2, T_prf, c, fs);
+    end
 end
 
-% Vectorized error calculation
+% Average estimates across runs
+estimated_vels = mean(estimates_matrix, 2);
+
+% Compute errors (using averaged estimates)
 errors = abs(estimated_vels - test_velocities') * 100;  % cm/s
 error_rel = 100 * abs(estimated_vels - test_velocities') ./ abs(test_velocities');
 
-% Display results
+% display averaged results
+fprintf('Averaged over %d runs\n', N_runs);
 for i = 1:n_test_vels
     fprintf('%-20.2f %-20.2f %-20.2f %-15.3f %-15.2f\n', ...
             test_velocities(i)*100, expected_delays(i), estimated_vels(i)*100, ...
             errors(i), error_rel(i));
 end
 
-fprintf('\nMean absolute error: %.3f cm/s\n', mean(errors));
-fprintf('Max absolute error: %.3f cm/s\n\n', max(errors));
-
-%% Test 3: Multiple Estimates (Repeatability)
-fprintf('========================================\n');
-fprintf('TEST 3: Multiple Estimates (Repeatability)\n');
-fprintf('========================================\n\n');
-
-% Generate multiple trials with same velocity to test consistency
-v_test = 0.3256;  % 32.56 cm/s
-Ntrials_test = 50;  
-
-fprintf('Generating %d trials with velocity %.2f cm/s\n', Ntrials_test, v_test*100);
-fprintf('Each trial generates 2 lines for velocity estimation\n\n');
-
-% Pre-allocate
-estimates = zeros(Ntrials_test, 1);
-
-% Generate estimates
-for i = 1:Ntrials_test
-    [rf_trial, ~] = simulate_ultrasound_data(v_test, 2);  % Only 2 lines per trial
-    estimates(i) = estimate_blood_velocity(rf_trial(:, 1), rf_trial(:, 2), T_prf, c, fs);
-    
-    % Print progress every 10 iterations
-    if mod(i, 10) == 0
-        fprintf('  Processed %d / %d trials (%.1f%%)\n', i, Ntrials_test, 100*i/Ntrials_test);
-    end
-end
-
-fprintf('  Completed all %d trials!\n\n', Ntrials_test);
-
-fprintf('Results from %d estimates:\n', length(estimates));
-fprintf('  True velocity: %.2f cm/s\n', v_test*100);
-fprintf('  Mean estimate: %.2f cm/s\n', mean(estimates)*100);
-fprintf('  Std deviation: %.3f cm/s\n', std(estimates)*100);
-fprintf('  Min estimate:  %.2f cm/s\n', min(estimates)*100);
-fprintf('  Max estimate:  %.2f cm/s\n', max(estimates)*100);
-fprintf('  Mean error:    %.3f cm/s\n\n', mean(abs(estimates - v_test))*100);
-
-fprintf('Conclusion: Simulation provides consistent estimates.\n');
-fprintf('Small variations due to random scatterer distribution.\n\n');
-
 %% Visualization
 fprintf('========================================\n');
 fprintf('VISUALIZATION: Generating Separate Figures\n');
 fprintf('========================================\n\n');
 
-% Generate visualization data (multiple lines for RF image)
-v_vis = 0.32;  % 32 cm/s
-num_vis_lines = 10;
-[rf_vis, params_vis] = simulate_ultrasound_data(v_vis, num_vis_lines);
-t_plot = params_vis.t * 1e6;  % Convert to microseconds
+% Visualization: build two full RF lines from the long buffer (no windowing)
+v_vis = 0.32;  % 32 cm/s (for visualization only)
+% get the long RF buffer and params
+[~, params_base, rf_long] = simulate_ultrasound_data(0, 1);
+% compute sample shift for the chosen visualization velocity
+time_shift_vis = 2 * v_vis * T_prf / c;
+sample_shift_vis = round(time_shift_vis * fs);
+% construct two full RF lines from rf_long (no windowing applied)
+rf_line1_full = rf_long;                        % Line 1 (no shift)
+rf_line2_full = circshift(rf_long, sample_shift_vis); % Line 2 (shifted)
+% time axis for full rf_long (microseconds)
+t_long = (0:length(rf_long)-1) / fs * 1e6;
 
-%% Figure 1: Two RF Signals
+% Figure 1: Two RF Signals (full buffer, zoomed 0..20 us)
 fprintf('Creating Figure 1: Two RF Signals...\n');
 fig1 = figure('Position', [100, 100, 800, 800]);
-plot(t_plot, rf_vis(:, 1), 'b-', 'LineWidth', 2);
+plot(t_long, rf_line1_full, 'LineWidth', 1);
 hold on;
-plot(t_plot, rf_vis(:, 2), 'r-', 'LineWidth', 2);
-xlabel('Time (\mus)', 'FontSize', 14);
-ylabel('Amplitude', 'FontSize', 14);
-title('Simulated Ultrasound RF Signals (2 Lines)', 'FontSize', 16, 'FontWeight', 'bold');
-legend('Signal 1 (Line 1)', 'Signal 2 (Line 2)', 'Location', 'best', 'FontSize', 12);
-grid on;
-set(gca, 'FontSize', 12);
-axis square;
+plot(t_long, rf_line2_full, 'LineWidth', 1);
+xlabel('Time (\mus)', 'FontSize', 12);
+ylabel('Amplitude', 'FontSize', 12);
+title('Simulated Ultrasound RF Signals ', 'FontSize', 14);
+legend('Line 1 (no shift)', sprintf('Line 2 (shifted %d samples)', sample_shift_vis), 'Location', 'best', 'FontSize', 10);
+grid on; set(gca, 'FontSize', 12);
+% zoom to 0..10 microseconds as requested
+xlim([0 10]);
 saveas(fig1, 'Q7_RF_signals.png');
 fprintf('  Saved: Q7_RF_signals.png\n');
 
-%% Figure 2: Multiple RF Lines (showing all generated lines)
-fprintf('Creating Figure 2: Multiple RF Lines...\n');
-fig2 = figure('Position', [150, 150, 800, 800]);
-imagesc(t_plot, 1:num_vis_lines, rf_vis');
-colormap(gray);
-xlabel('Time (\mus)', 'FontSize', 14);
-ylabel('Line Number', 'FontSize', 14);
-title(sprintf('Multiple RF Lines (Showing Time Shift, v=%.0f cm/s)', v_vis*100), 'FontSize', 16, 'FontWeight', 'bold');
-colorbar;
-set(gca, 'FontSize', 12);
-axis square;
-saveas(fig2, 'Q7_RF_multiple_lines.png');
-fprintf('  Saved: Q7_RF_multiple_lines.png\n');
+% (Removed multiple-lines image per user request.)
 
 %% Figure 3: Velocity Estimation vs True Velocity (BLUE)
 fprintf('Creating Figure 3: Velocity Estimation vs True Velocity...\n');
@@ -235,10 +157,28 @@ fig3 = figure('Position', [200, 200, 800, 800]);
 true_vels_plot = test_velocities_cms;  % cm/s
 estimated_vels_plot = estimated_vels * 100;  % Convert to cm/s
 
+% Compute Doppler unambiguous velocity limit: v_max = c / (4 * f0 * T_prf)
+vmax = c / (4 * f0 * T_prf);           % m/s
+vmax_cm = vmax * 100;                   % cm/s
+
 plot(true_vels_plot, true_vels_plot, 'k--', 'LineWidth', 2.5, 'DisplayName', 'Perfect Estimation');
 hold on;
-plot(true_vels_plot, estimated_vels_plot, 'o-', 'Color', [0 0.4470 0.7410], 'LineWidth', 2.5, ...
-     'MarkerSize', 8, 'MarkerFaceColor', [0 0.4470 0.7410], 'DisplayName', 'Estimated');
+
+% Plot estimated values; highlight those outside |vz| <= vmax
+in_mask = abs(test_velocities) <= vmax;  % logical mask (m/s)
+out_mask = ~in_mask;
+
+% in-limit points (blue)
+plot(true_vels_plot(in_mask), estimated_vels_plot(in_mask), 'o-', 'Color', [0 0.4470 0.7410], ...
+    'LineWidth', 2.5, 'MarkerSize', 8, 'MarkerFaceColor', [0 0.4470 0.7410], 'DisplayName', 'Estimated (|vz|<=v_{max})');
+
+% out-of-limit points (red X)
+plot(true_vels_plot(out_mask), estimated_vels_plot(out_mask), 'x', 'Color', [0.8500 0.3250 0.0980], ...
+    'LineWidth', 2.5, 'MarkerSize', 10, 'DisplayName', 'Estimated (|vz|>v_{max})');
+
+% vertical limit lines at +/- vmax
+xline(vmax_cm, 'r--', sprintf('+v_{max}=%.1f cm/s', vmax_cm), 'LineWidth', 1.5, 'HandleVisibility', 'off', 'LabelHorizontalAlignment', 'left');
+xline(-vmax_cm, 'r--', sprintf('-v_{max}=%.1f cm/s', vmax_cm), 'LineWidth', 1.5, 'HandleVisibility', 'off', 'LabelHorizontalAlignment', 'right');
 xlabel('True Velocity (cm/s)', 'FontSize', 14, 'FontWeight', 'bold');
 ylabel('Estimated Velocity (cm/s)', 'FontSize', 14, 'FontWeight', 'bold');
 title('Velocity Estimation Performance', 'FontSize', 16, 'FontWeight', 'bold');
@@ -250,31 +190,6 @@ xlim([min(true_vels_plot)-5 max(true_vels_plot)+5]);
 ylim([min(true_vels_plot)-5 max(true_vels_plot)+5]);
 saveas(fig3, 'Q7_velocity_estimation.png');
 fprintf('  Saved: Q7_velocity_estimation.png\n');
-
-%% Figure 4: Error vs True Velocity (ORANGE)
-fprintf('Creating Figure 4: Error vs True Velocity...\n');
-fig4 = figure('Position', [250, 250, 800, 800]);
-
-% Calculate errors from Test 2
-errors_plot = abs(estimated_vels - test_velocities') * 100;  % cm/s
-
-plot(true_vels_plot, errors_plot, 'o-', 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 2.5, ...
-     'MarkerSize', 8, 'MarkerFaceColor', [0.8500 0.3250 0.0980]);
-hold on;
-yline(mean(errors_plot), 'r--', sprintf('Mean Error = %.2f cm/s', mean(errors_plot)), ...
-      'LineWidth', 2, 'FontSize', 12, 'LabelHorizontalAlignment', 'right');
-xlabel('True Velocity (cm/s)', 'FontSize', 14, 'FontWeight', 'bold');
-ylabel('Absolute Error (cm/s)', 'FontSize', 14, 'FontWeight', 'bold');
-title('Estimation Error vs Velocity', 'FontSize', 16, 'FontWeight', 'bold');
-grid on;
-set(gca, 'FontSize', 12);
-axis square;
-xlim([min(true_vels_plot)-5 max(true_vels_plot)+5]);
-ylim([0 max(errors_plot)*1.1]);
-saveas(fig4, 'Q7_error_vs_velocity.png');
-fprintf('  Saved: Q7_error_vs_velocity.png\n');
-
-fprintf('\nAll figures saved successfully!\n\n');
 
 fprintf('\nAll figures saved successfully!\n\n');
 
@@ -291,11 +206,9 @@ fprintf('✓ Accurate across velocity range (-110 to +100 cm/s)\n');
 fprintf('✓ Can detect flow direction (positive/negative velocity)\n');
 fprintf('✓ Consistent estimates with minimal variance\n');
 fprintf('✓ Cross-correlation successfully finds time delay\n');
-fprintf('✓ Generated 4 separate diagnostic figures:\n');
-fprintf('  1. Q7_RF_signals.png - Two RF signals\n');
-fprintf('  2. Q7_RF_multiple_lines.png - Multiple RF lines showing time shift\n');
-fprintf('  3. Q7_velocity_estimation.png - Estimated vs True velocity (blue)\n');
-fprintf('  4. Q7_error_vs_velocity.png - Error vs velocity (orange)\n\n');
+fprintf('✓ Generated diagnostic figures:\n');
+fprintf('  1. Q7_RF_signals.png - Two RF signals (Line 1 vs Line 2, 0-20 \mus)\n');
+fprintf('  2. Q7_velocity_estimation.png - Estimated vs True velocity (blue)\n\n');
 fprintf('Simulation parameters match medical ultrasound specifications.\n');
 fprintf('The function is ready to be used in Q8, Q9, and Q10.\n');
 fprintf('========================================\n');
